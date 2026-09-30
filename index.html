@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Absensi QR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.0.7/html5-qrcode.min.js"></script>
+</head>
+<body>
+
+<div class="topnav">
+  <div class="topnav-inner">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="#fdf9ef" stroke-width="2"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="#fdf9ef" stroke-width="2"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="#fdf9ef" stroke-width="2"/><path d="M14 14h3v3h-3zM19 14h2v2h-2zM14 19h2v2h-2zM19 19h2v2h-2z" fill="#fdf9ef"/></svg>
+      </div>
+      <div class="brand-text"><div class="title">Absensi QR</div><div class="sub" id="topSub">Sistem kehadiran digital</div></div>
+    </div>
+    <div class="tabs">
+      <button id="tabAdmin" class="active">Admin</button>
+      <button id="tabCheckin">Check-in</button>
+      <button id="tabMember">Member</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== ADMIN ==================== -->
+<div class="shell wide" id="adminView">
+
+  <div id="dashboard" style="display:block;">
+
+    <div class="card">
+      <div class="kicker">Langkah 1</div>
+      <h2>Buat Sesi Baru</h2>
+      <label>Nama Sesi / Mata Kuliah</label>
+      <input type="text" id="namaSesi" placeholder="Contoh: RPL — Pertemuan 10">
+      <label>Durasi Aktif (menit)</label>
+      <input type="number" id="durasi" value="90" min="5">
+      <button class="btn btn-primary" id="btnCreate"><span id="createLabel">Buat Sesi</span></button>
+    </div>
+
+    <div class="card" id="qrCard" style="display:none; text-align:center;">
+      <div class="kicker">Sesi Berlangsung</div>
+      <h2 id="qrSesiName" style="justify-content:center;">Sesi Aktif</h2>
+      <div class="kode-sesi" id="kodeSesiText">------</div>
+      <div class="qr-wrap-outer"><div class="qr-frame"><div id="qrcode"></div></div></div>
+      <p class="lead">Tunjukkan kode/QR ini ke mahasiswa, lalu minta mereka buka tab <b>Check-in</b> pada perangkat yang sama untuk mengisi kehadiran.</p>
+      <div class="row">
+        <button class="btn btn-outline btn-sm" id="btnExport">Export CSV</button>
+        <button class="btn btn-danger btn-sm" id="btnEnd">Akhiri Sesi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Rekap Kehadiran</h2>
+      <select id="sesiSelect"><option value="">— Pilih sesi —</option></select>
+      <div id="recapWrap"><div class="empty-state">Pilih sesi di atas untuk melihat rekap kehadiran.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>Kartu ID QR Mahasiswa <span style="font-family:'Inter',sans-serif;font-weight:500;color:var(--ink-faint);font-size:11.5px;">(opsional)</span></h2>
+      <p class="lead">Ketik NIM &amp; Nama — QR muncul otomatis dan langsung bisa discan. Mahasiswa simpan/screenshot untuk check-in cepat tiap sesi.</p>
+      <label>NIM</label>
+      <input type="text" id="cardNim" placeholder="210702001">
+      <label>Nama Lengkap</label>
+      <input type="text" id="cardNama" placeholder="Nama sesuai KTM">
+      <div id="cardResult" style="display:none;margin-top:6px;text-align:center;">
+        <div class="qr-wrap-outer"><div class="qr-frame" style="padding:18px;"><div id="cardQr"></div></div></div>
+        <div class="row"><button class="btn btn-outline btn-sm" id="btnUnduhKartu">Unduh QR</button><button class="btn btn-primary btn-sm" id="btnDaftarMhs">Simpan ke Data Mahasiswa</button></div>
+        <div id="cardAlert" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Pengaturan</h2>
+      <div style="margin-bottom:14px;"><span class="badge badge-off" id="syncStatus"><span class="badge-dot"></span>Memeriksa...</span></div>
+      <button class="btn btn-outline btn-sm" id="btnSync" style="width:100%;margin-bottom:10px;">Sinkronkan Sekarang</button>
+      <button class="btn btn-danger btn-sm" id="btnReset" style="width:100%;">Hapus Semua Data</button>
+    </div>
+  </div>
+
+  <div class="footer-note">ABSENSI QR &middot; SEBRAN_M</div>
+</div>
+
+<!-- ==================== CHECK-IN ==================== -->
+<div class="shell" id="checkinView" style="display:none;">
+
+  <div class="card" id="ciNoSession" style="text-align:center;">
+    <div class="hero-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 8v5M12 16h.01" stroke="#fdf9ef" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="12" r="9" stroke="#fdf9ef" stroke-width="1.8"/></svg></div>
+    <h1>Belum Ada Sesi Aktif</h1>
+    <p class="lead">Minta admin membuat sesi terlebih dahulu di tab <b>Admin</b>.</p>
+  </div>
+
+  <div class="card" id="ciPickSession" style="display:none;">
+    <div class="kicker">Mulai Absen</div>
+    <h1>Pilih Sesi</h1>
+    <p class="lead">Pilih sesi absensi yang sedang berlangsung.</p>
+    <select id="ciSesiSelect"></select>
+    <button class="btn btn-primary" id="btnCiLanjut">Lanjutkan</button>
+  </div>
+
+  <div class="card" id="ciForm" style="display:none;">
+    <div class="kicker">Isi Kehadiran</div>
+    <h1 id="ciSesiTitle">Nama Sesi</h1>
+    <p class="lead">Scan kartu QR-mu, atau isi manual di bawah.</p>
+    <div id="ciAlert"></div>
+
+    <div id="ciScanBox" class="scan-box" style="display:none;"></div>
+    <button class="btn btn-outline" id="btnCiScan">Scan Kartu QR (Kamera)</button>
+
+    <div class="divider"><span>atau isi manual</span></div>
+
+    <label>NIM</label>
+    <input type="text" id="ciNim" placeholder="Contoh: 210702001" inputmode="numeric">
+    <label>Nama Lengkap</label>
+    <input type="text" id="ciNama" placeholder="Nama sesuai KTM">
+
+    <div id="ciLiveQrWrap" style="display:none;text-align:center;margin-bottom:18px;">
+      <label style="text-align:center;">Kode QR-mu</label>
+      <div class="qr-wrap-outer"><div class="qr-frame" style="padding:16px;"><div id="ciLiveQr"></div></div></div>
+      <p class="lead" style="margin-bottom:0;font-size:12px;">Bisa langsung ditunjukkan ke admin untuk discan, atau tekan "Absen Sekarang" di bawah.</p>
+    </div>
+
+    <button class="btn btn-primary" id="btnCiSubmit">Absen Sekarang</button>
+    <div style="margin-top:14px;text-align:center;"><button class="link-plain" id="btnCiGanti">Ganti sesi</button></div>
+  </div>
+
+  <div class="card" id="ciSuccess" style="display:none; text-align:center;">
+    <div style="width:58px;height:58px;border-radius:50%;background:var(--ok-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="#1f7a4d" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </div>
+    <h1>Absensi Tercatat</h1>
+    <p class="lead" id="ciSuccessMsg">Kehadiranmu sudah berhasil disimpan.</p>
+    <span class="badge badge-ok"><span class="badge-dot"></span>Hadir</span>
+    <div style="margin-top:20px;"><button class="btn btn-outline btn-sm" id="btnCiAnother">Absen Mahasiswa Lain</button></div>
+  </div>
+
+  <div class="footer-note">ABSENSI QR &middot; SEBRAN_M</div>
+</div>
+
+<!-- ==================== MEMBER ==================== -->
+<div class="shell" id="memberView" style="display:none;">
+
+  <div class="card" id="mbLogin">
+    <div class="hero-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.6" stroke="#fdf9ef" stroke-width="1.8"/><path d="M5 20c1.2-3.8 4.2-6 7-6s5.8 2.2 7 6" stroke="#fdf9ef" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+    <div class="kicker" style="text-align:center;">Area Mahasiswa</div>
+    <h1 style="text-align:center;">Riwayat Absensi Saya</h1>
+    <p class="lead" style="text-align:center;">Masukkan NIM untuk melihat riwayat kehadiranmu sendiri. Data mahasiswa lain tidak dapat dilihat dari sini.</p>
+    <label>NIM</label>
+    <input type="text" id="mbNim" placeholder="Contoh: 210702001" inputmode="numeric">
+    <button class="btn btn-primary" id="btnMbLogin">Lihat Riwayat Saya</button>
+  </div>
+
+  <div class="card" id="mbResult" style="display:none;">
+    <div class="kicker">Riwayat Kehadiran</div>
+    <h1 id="mbNama">Mahasiswa</h1>
+    <p class="lead">NIM: <span id="mbNimLabel" style="font-family:'JetBrains Mono',monospace;"></span></p>
+    <div id="mbTableWrap"><div class="empty-state">Belum ada riwayat kehadiran.</div></div>
+    <div style="margin-top:16px;text-align:center;"><button class="link-plain" id="btnMbLogout">Cari NIM lain</button></div>
+  </div>
+
+  <div class="footer-note">ABSENSI QR &middot; SEBRAN_M</div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/sheets.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
